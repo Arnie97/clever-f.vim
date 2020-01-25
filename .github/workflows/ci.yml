@@ -33,6 +33,7 @@ jobs:
       # On windows `covimerage write_coverage` exit with non-zero status
       - name: Install Python
         uses: actions/setup-python@v1
+      - run: cat ./test/profile.txt
       - name: Report coverage
         run: |
           pip install covimerage
