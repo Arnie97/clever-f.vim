@@ -32,17 +32,27 @@ jobs:
           ../vim-themis/bin/themis .
       # On windows `covimerage write_coverage` exit with non-zero status
       - name: Install Python
+        if: matrix.os == 'windows-latest'
         uses: actions/setup-python@v1
       - run: cat ./test/profile.txt
+        if: matrix.os == 'windows-latest'
       - name: Report coverage
+        if: matrix.os == 'windows-latest'
         run: |
           pip install covimerage
           covimerage --version
           cd ./test
+          echo 'start covimerage'
           covimerage --loglevel debug --verbose write_coverage profile.txt
+          echo 'done covimerage'
+          type .coverage_covimerage
+          echo 'coverage report'
           coverage report
+          echo 'coverage xml'
           coverage xml
+          echo 'done all'
       - name: Upload coverage to codecov
+        if: matrix.os == 'windows-latest'
         uses: codecov/codecov-action@v1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
