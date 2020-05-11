@@ -8,7 +8,6 @@ let s:ON_NVIM = has('nvim')
 let g:clever_f_across_no_line          = get(g:, 'clever_f_across_no_line', 0)
 let g:clever_f_ignore_case             = get(g:, 'clever_f_ignore_case', 0)
 let g:clever_f_use_migemo              = get(g:, 'clever_f_use_migemo', 0)
-let g:clever_f_fix_key_direction       = get(g:, 'clever_f_fix_key_direction', 0)
 let g:clever_f_show_prompt             = get(g:, 'clever_f_show_prompt', 0)
 let g:clever_f_smart_case              = get(g:, 'clever_f_smart_case', 0)
 let g:clever_f_chars_match_any_signs   = get(g:, 'clever_f_chars_match_any_signs', '')
@@ -109,6 +108,23 @@ function! s:remove_highlight() abort
     endfor
 endfunction
 
+function! s:update_highlight() abort
+    if !g:clever_f_mark_char
+        return
+    endif
+    call s:remove_highlight()
+
+    let mode = s:mode()
+    if mode ==? 'v' || mode ==# "\<C-v>" || mode ==# 'n' ||
+     \ mode ==? 's' || mode ==# "\<C-s>" || mode ==# 'ce'
+        augroup plugin-clever-f-finalizer
+            autocmd CursorMoved <buffer> call s:maybe_finalize()
+            autocmd InsertEnter <buffer> call s:finalize()
+        augroup END
+        call s:mark_char_in_current_line(s:previous_map[mode], s:previous_char_num[mode])
+    endif
+endfunction
+
 function! s:is_timedout() abort
     let cur = reltime()
     let rel = reltimestr(reltime(s:timestamp, cur))
@@ -197,6 +213,7 @@ function! clever_f#find_with(map) abort
     let current_pos = getpos('.')[1 : 2]
 
     let mode = s:mode()
+    let s:previous_map[mode] = a:map
     if current_pos != get(s:previous_pos, mode, [0, 0])
         let back = 0
         if g:clever_f_mark_cursor
@@ -216,7 +233,6 @@ function! clever_f#find_with(map) abort
                 redraw
             endif
             if g:clever_f_show_prompt | echon 'clever-f: ' | endif
-            let s:previous_map[mode] = a:map
             let s:first_move[mode] = 1
             let cn = s:getchar()
             if cn == char2nr("\<Esc>")
@@ -238,18 +254,7 @@ function! clever_f#find_with(map) abort
                 let s:timestamp = reltime()
             endif
 
-            if g:clever_f_mark_char
-                call s:remove_highlight()
-                if mode ==# 'n' || mode ==? 'v' || mode ==# "\<C-v>" ||
-                 \ mode ==# 'ce' || mode ==? 's' || mode ==# "\<C-s>"
-                    augroup plugin-clever-f-finalizer
-                        autocmd CursorMoved <buffer> call s:maybe_finalize()
-                        autocmd InsertEnter <buffer> call s:finalize()
-                    augroup END
-                    call s:mark_char_in_current_line(s:previous_map[mode], s:previous_char_num[mode])
-                endif
-            endif
-
+            call s:update_highlight()
             if g:clever_f_show_prompt | redraw! | endif
         finally
             if g:clever_f_mark_cursor | call matchdelete(cursor_marker) | endif
@@ -273,9 +278,7 @@ function! clever_f#find_with(map) abort
     else
         " when repeated
         let back = a:map =~# '\u'
-        if g:clever_f_fix_key_direction
-            let back = s:previous_map[mode] =~# '\u' ? !back : back
-        endif
+        let back = s:previous_map[mode] =~# '\u' ? !back : back
 
         " reset and retry if timed out
         if g:clever_f_timeout_ms > 0 && s:is_timedout()

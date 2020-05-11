@@ -631,7 +631,6 @@ End
 Describe g:clever_f_fix_key_direction
     Before
         new
-        let g:clever_f_fix_key_direction = 1
         call clever_f#reset()
         call AddLine('poge huga hiyo poyo')
         normal! gg0
@@ -639,7 +638,6 @@ Describe g:clever_f_fix_key_direction
 
     After
         close!
-        let g:clever_f_fix_key_direction = 0
     End
 
     It should fix the direction of search for f and F
